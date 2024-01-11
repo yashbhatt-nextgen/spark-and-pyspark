@@ -30,7 +30,7 @@ ssc.awaitTermination()
 
 
 """
-To run this, put both files in same directory.
+To run this
 
 Terminal-1 : nc -lk 9000
 Terminal-2 : spark-submit word_count_Dstream.py localhost:9000
