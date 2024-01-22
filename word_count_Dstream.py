@@ -1,40 +1,31 @@
 from pyspark import SparkContext
 from pyspark.streaming import StreamingContext
 
-# Spark Context with two working threads
-sc = SparkContext('local[2]', appName='DsteamDemo')
+class DStreamDemo:
+    _sc = None
 
-# Local Streaming Context with batch interval of 1 sec
-ssc = StreamingContext(sc, 5)
+    def __init__(self, host, port, batch_interval):
+        if not DStreamDemo._sc:
+            DStreamDemo._sc = SparkContext('local[2]', appName='DstreamDemo')
 
-# Now we create a local Dstream that will connect to the stream of input lines from Localhost:9000
-stream_lines = ssc.socketTextStream('localhost', 9000)
+        self.ssc = StreamingContext(DStreamDemo._sc, batch_interval)
+        self.stream_lines = self.ssc.socketTextStream(host, port)
 
-# Splitting lines into the words
-words = stream_lines.flatMap(lambda x: x.split(" "))
+    def process_stream(self):
+        words = self.stream_lines.flatMap(lambda x: x.split(" "))
+        pairs = words.map(lambda word: (word, 1))
+        word_counts = pairs.reduceByKey(lambda x, y: x + y)
+        word_counts.pprint()
 
-# Counting every word in each batches
-pairs = words.map(lambda word: (word, 1))
-wordCounts = pairs.reduceByKey(lambda x,y: x+y)
+    def start_streaming(self):
+        self.ssc.start()
+        self.ssc.awaitTermination()
 
-# Printing first 10 elements of each RDD generated in this DStream to the console
-wordCounts.pprint()
+if __name__ == "__main__":
+    host = 'localhost'
+    port = 9000
+    batch_interval = 5
 
-
-# Start computation
-ssc.start()
-
-ssc.awaitTermination()
-
-
-
-
-"""
-To run this
-
-Terminal-1 : nc -lk 9000
-Terminal-2 : spark-submit word_count_Dstream.py localhost:9000
-
-"""
-
-
+    dstream_demo = DStreamDemo(host, port, batch_interval)
+    dstream_demo.process_stream()
+    dstream_demo.start_streaming()
